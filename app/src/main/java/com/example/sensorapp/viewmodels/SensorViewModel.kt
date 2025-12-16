@@ -1,20 +1,29 @@
 package com.example.sensorapp.viewmodels
 
 import android.app.Application
+import android.content.ContentValues
 import android.content.Context
 import android.hardware.Sensor
 import android.hardware.SensorEvent
 import android.hardware.SensorEventListener
 import android.hardware.SensorManager
+import android.provider.MediaStore
+import android.widget.Toast
 import androidx.compose.runtime.State
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.AndroidViewModel
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 import kotlin.math.atan2
 
+data class MeasurementData(
+    val timestamp: Long, val value: Float, val algorithm: String
+)
+
 enum class Algorithm {
-    EWMA_FILTER,
-    COMPLEMENTARY_FILTER
+    EWMA_FILTER, SENSOR_FUSION
 }
 
 class SensorViewModel(application: Application) : AndroidViewModel(application),
@@ -25,7 +34,7 @@ class SensorViewModel(application: Application) : AndroidViewModel(application),
     // Sensors
     private val accelerometer: Sensor? = sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER)
     private val linearAccelerometer: Sensor? =
-        sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER)
+        sensorManager.getDefaultSensor(Sensor.TYPE_LINEAR_ACCELERATION)
     private val gravitySensor: Sensor? = sensorManager.getDefaultSensor(Sensor.TYPE_GRAVITY)
     private val gyroscope: Sensor? = sensorManager.getDefaultSensor(Sensor.TYPE_GYROSCOPE)
 
@@ -57,6 +66,10 @@ class SensorViewModel(application: Application) : AndroidViewModel(application),
     private var fusedAngle: Float = 0f
     private val accReading = FloatArray(3)
 
+    // Data Collection
+    private val measurementHistory = mutableListOf<MeasurementData>()
+    private var sessionStartTimestamp: Long = 0L
+
     fun setAlgorithm(algorithm: Algorithm) {
         if (!_isMeasuring.value) {
             _currentAlgorithm.value = algorithm
@@ -67,39 +80,33 @@ class SensorViewModel(application: Application) : AndroidViewModel(application),
     fun startMeasurement() {
         if (!_isMeasuring.value) {
 
+            measurementHistory.clear()
             resetAlgorithmState()
+            sessionStartTimestamp = 0L
 
             when (_currentAlgorithm.value) {
                 Algorithm.EWMA_FILTER -> {
                     gravitySensor?.also { grav ->
                         sensorManager.registerListener(
-                            this,
-                            grav,
-                            SensorManager.SENSOR_DELAY_UI
+                            this, grav, SensorManager.SENSOR_DELAY_UI
                         )
                     }
                     linearAccelerometer?.also { acc ->
                         sensorManager.registerListener(
-                            this,
-                            acc,
-                            SensorManager.SENSOR_DELAY_UI
+                            this, acc, SensorManager.SENSOR_DELAY_UI
                         )
                     }
                 }
 
-                Algorithm.COMPLEMENTARY_FILTER -> {
+                Algorithm.SENSOR_FUSION -> {
                     accelerometer?.also {
                         sensorManager.registerListener(
-                            this,
-                            it,
-                            SensorManager.SENSOR_DELAY_UI
+                            this, it, SensorManager.SENSOR_DELAY_UI
                         )
                     }
                     gyroscope?.also { gyro ->
                         sensorManager.registerListener(
-                            this,
-                            gyro,
-                            SensorManager.SENSOR_DELAY_UI
+                            this, gyro, SensorManager.SENSOR_DELAY_UI
                         )
                     }
                 }
@@ -112,16 +119,46 @@ class SensorViewModel(application: Application) : AndroidViewModel(application),
         if (_isMeasuring.value) {
             sensorManager.unregisterListener(this)
             _isMeasuring.value = false
-            resetUiState()
+
+            //resetUiState()
         }
     }
 
     override fun onSensorChanged(event: SensorEvent?) {
         if (event == null || !_isMeasuring.value) return
 
+        if (sessionStartTimestamp == 0L) {
+            sessionStartTimestamp = event.timestamp
+        }
+
+        //val initialTimestamp = if (measurementHistory.isEmpty()) event.timestamp else measurementHistory.first().timestamp
+        val relativeTimestamp = event.timestamp - sessionStartTimestamp
+
+
         when (_currentAlgorithm.value) {
-            Algorithm.EWMA_FILTER -> processEwma(event)
-            Algorithm.COMPLEMENTARY_FILTER -> processComplementary(event)
+            Algorithm.EWMA_FILTER -> {
+                processEwma(event)
+
+                measurementHistory.add(
+                    MeasurementData(
+                        relativeTimestamp, _armElevation.floatValue, "EWMA"
+                    )
+                )
+            }
+
+            Algorithm.SENSOR_FUSION -> {
+                processComplementary(event)
+
+                if (event.sensor.type == Sensor.TYPE_GYROSCOPE) {
+                    measurementHistory.add(
+                        MeasurementData(
+                            relativeTimestamp,
+                            _armElevation.floatValue,
+                            "Sensor Fusion"
+                        )
+                    )
+                }
+            }
         }
     }
 
@@ -131,7 +168,7 @@ class SensorViewModel(application: Application) : AndroidViewModel(application),
                 val grav = event.values
                 val y = grav[1]
                 val z = grav[2]
-                val rawAngle = Math.toDegrees(atan2(-y, z).toDouble()).toFloat()
+                val rawAngle = Math.toDegrees(atan2(-y.toDouble(), z.toDouble())).toFloat()
 
                 // y(n) = alpha * x(n) + (1 - alpha) * y(n-1)
                 lastEwmaValue = alpha * rawAngle + (1.0f - alpha) * lastEwmaValue
@@ -161,7 +198,7 @@ class SensorViewModel(application: Application) : AndroidViewModel(application),
             Sensor.TYPE_GYROSCOPE -> {
                 val y = accReading[1]
                 val z = accReading[2]
-                val accAngle = Math.toDegrees(atan2(-y, z).toDouble()).toFloat()
+                val accAngle = Math.toDegrees(atan2(-y.toDouble(), z.toDouble())).toFloat()
 
                 val gyroRate = event.values[0]
                 val gyroAngle = fusedAngle + gyroRate * dt
@@ -171,6 +208,80 @@ class SensorViewModel(application: Application) : AndroidViewModel(application),
                 _armElevation.floatValue = fusedAngle
             }
         }
+    }
+
+    fun exportDataToCsv() {
+        if (measurementHistory.isEmpty()) {
+            Toast.makeText(getApplication(), "No data to export.", Toast.LENGTH_SHORT).show()
+            return
+        }
+
+        val delimiter = ";"
+        val csvHeader =
+            "Timestamp (HH:mm:ss.ms)${delimiter}Arm Elevation (degrees)${delimiter}Algorithm: ${_currentAlgorithm.value}\n"
+
+        val csvData = measurementHistory.joinToString(separator = "\n") { dataPoint ->
+            val formattedTime = formatNanosToTimeString(dataPoint.timestamp)
+            val formattedValue =
+                String.format(Locale.forLanguageTag("sv-SE"), "%.4f", dataPoint.value)
+
+            "$formattedTime$delimiter$formattedValue"
+        }
+        val fullCsv = csvHeader + csvData
+
+        val timeFormatter = SimpleDateFormat("HH-mm-ss", Locale.getDefault())
+        val currentDateTimeString = timeFormatter.format(Date())
+
+        val resolver = getApplication<Application>().contentResolver
+        val contentValues = ContentValues().apply {
+            put(MediaStore.MediaColumns.DISPLAY_NAME, "ArmElevationData_$currentDateTimeString.csv")
+            put(MediaStore.MediaColumns.MIME_TYPE, "text/csv")
+            put(MediaStore.MediaColumns.RELATIVE_PATH, "Download/SensorApp")
+        }
+
+        val uri = resolver.insert(MediaStore.Files.getContentUri("external"), contentValues)
+
+        if (uri != null) {
+            try {
+                resolver.openOutputStream(uri).use { outputStream ->
+                    if (outputStream != null) {
+                        outputStream.write(fullCsv.toByteArray(Charsets.UTF_8))
+                        Toast.makeText(
+                            getApplication(),
+                            "Data exported to Downloads/SensorApp",
+                            Toast.LENGTH_LONG
+                        ).show()
+                    }
+                }
+            } catch (e: Exception) {
+                Toast.makeText(
+                    getApplication(),
+                    "Error exporting file ${e.message}",
+                    Toast.LENGTH_LONG
+                ).show()
+            }
+        } else {
+            Toast.makeText(getApplication(), "Error creating file URI.", Toast.LENGTH_LONG).show()
+        }
+        measurementHistory.clear()
+    }
+
+    private fun formatNanosToTimeString(nanos: Long): String {
+        if (nanos < 0) return "00:00:00.000"
+        val totalMillis = nanos / 1_000_000
+        val hours = totalMillis / (1000 * 60 * 60)
+        val minutes = (totalMillis % (1000 * 60 * 60)) / (1000 * 60)
+        val seconds = (totalMillis % (1000 * 60)) / 1000
+        val millis = totalMillis % 1000
+
+        return String.format(
+            Locale.US,
+            "%02d:%02d:%02d.%03d",
+            hours,
+            minutes,
+            seconds,
+            millis
+        )
     }
 
     private fun resetAlgorithmState() {

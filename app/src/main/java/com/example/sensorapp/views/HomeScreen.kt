@@ -27,6 +27,7 @@ fun HomeScreen(
     currentAlgorithm: Algorithm,
     onAlgorithmChange: (Algorithm) -> Unit,
     onButtonClick: () -> Unit,
+    onExportClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
 
@@ -58,8 +59,8 @@ fun HomeScreen(
                 Text("EWMA Filter")
             }
             Button(
-                onClick = { onAlgorithmChange(Algorithm.COMPLEMENTARY_FILTER) },
-                enabled = !isMeasuring && currentAlgorithm != Algorithm.COMPLEMENTARY_FILTER
+                onClick = { onAlgorithmChange(Algorithm.SENSOR_FUSION) },
+                enabled = !isMeasuring && currentAlgorithm != Algorithm.SENSOR_FUSION
             ) {
                 Text("Sensor Fusion")
             }
@@ -85,6 +86,13 @@ fun HomeScreen(
         Spacer(modifier = Modifier.height(20.dp))
         Button(onClick = onButtonClick) {
             Text(text = if (isMeasuring) "Stop Measurement" else "Start Measurement")
+        }
+        Spacer(modifier = Modifier.height(16.dp))
+        Button(
+            onClick = onExportClick,
+            enabled = !isMeasuring
+        ) {
+            Text("Export Data to CSV")
         }
         Spacer(modifier = Modifier.height(60.dp))
 

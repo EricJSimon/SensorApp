@@ -60,7 +60,10 @@ class MainActivity : ComponentActivity() {
                             } else {
                                 viewModel.startMeasurement()
                             }
-                        }
+                        },
+                        onExportClick = {
+                            viewModel.exportDataToCsv()
+                        },
                     )
                 }
             }
