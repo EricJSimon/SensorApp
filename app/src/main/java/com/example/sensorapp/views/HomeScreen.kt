@@ -2,6 +2,7 @@ package com.example.sensorapp.views
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
@@ -14,6 +15,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.sensorapp.viewmodels.Algorithm
 import java.util.Locale
 
 @Composable
@@ -22,9 +24,12 @@ fun HomeScreen(
     armElevation: Float,
     linearAccelerometerData: FloatArray,
     gyroscopeData: FloatArray,
+    currentAlgorithm: Algorithm,
+    onAlgorithmChange: (Algorithm) -> Unit,
     onButtonClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+
     Column(
         modifier = modifier.fillMaxSize(),
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -36,6 +41,30 @@ fun HomeScreen(
             fontWeight = FontWeight.Bold
         )
         Spacer(modifier = Modifier.height(40.dp))
+
+        Text(
+            "Algorithm",
+            style = MaterialTheme.typography.titleMedium
+        )
+        Spacer(modifier = Modifier.height(0.dp))
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(16.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Button(
+                onClick = { onAlgorithmChange(Algorithm.EWMA_FILTER) },
+                enabled = !isMeasuring && currentAlgorithm != Algorithm.EWMA_FILTER
+            ) {
+                Text("EWMA Filter")
+            }
+            Button(
+                onClick = { onAlgorithmChange(Algorithm.COMPLEMENTARY_FILTER) },
+                enabled = !isMeasuring && currentAlgorithm != Algorithm.COMPLEMENTARY_FILTER
+            ) {
+                Text("Sensor Fusion")
+            }
+        }
+        Spacer(modifier = Modifier.height(32.dp))
 
         Text(
             text = "Arm Elevation:",

@@ -42,20 +42,25 @@ class MainActivity : ComponentActivity() {
                     val armElevation by viewModel.armElevation
                     val linearAccelerometerData by viewModel.linearAccelerometerData
                     val gyroscopeData by viewModel.gyroscopeData
+                    val currentAlgorithm by viewModel.currentAlgorithm
 
                     HomeScreen(
+                        modifier = Modifier.padding(innerPadding),
                         isMeasuring = isMeasuring,
                         armElevation = armElevation,
                         linearAccelerometerData = linearAccelerometerData,
                         gyroscopeData = gyroscopeData,
+                        currentAlgorithm = currentAlgorithm,
+                        onAlgorithmChange = { algorithm ->
+                            viewModel.setAlgorithm(algorithm)
+                        },
                         onButtonClick = {
                             if (isMeasuring) {
                                 viewModel.stopMeasurement()
                             } else {
                                 viewModel.startMeasurement()
                             }
-                        },
-                        modifier = Modifier.padding(innerPadding)
+                        }
                     )
                 }
             }
