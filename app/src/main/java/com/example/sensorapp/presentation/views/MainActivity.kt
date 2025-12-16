@@ -1,4 +1,4 @@
-package com.example.sensorapp
+package com.example.sensorapp.presentation.views
 
 import android.Manifest
 import android.os.Bundle
@@ -12,9 +12,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
+import com.example.sensorapp.presentation.viewmodels.SensorViewModel
 import com.example.sensorapp.ui.theme.SensorAppTheme
-import com.example.sensorapp.viewmodels.SensorViewModel
-import com.example.sensorapp.views.HomeScreen
 
 class MainActivity : ComponentActivity() {
     private val viewModel: SensorViewModel by viewModels()

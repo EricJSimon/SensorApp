@@ -1,4 +1,4 @@
-package com.example.sensorapp.views
+package com.example.sensorapp.presentation.views
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -15,7 +15,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.sensorapp.viewmodels.Algorithm
+import com.example.sensorapp.domain.model.Algorithm
 import java.util.Locale
 
 @Composable
@@ -47,7 +47,7 @@ fun HomeScreen(
             "Algorithm",
             style = MaterialTheme.typography.titleMedium
         )
-        Spacer(modifier = Modifier.height(0.dp))
+        Spacer(modifier = Modifier.height(8.dp))
         Row(
             horizontalArrangement = Arrangement.spacedBy(16.dp),
             verticalAlignment = Alignment.CenterVertically
