@@ -21,7 +21,6 @@ class MainActivity : ComponentActivity() {
     private val requestPermissionLauncher =
         registerForActivityResult(ActivityResultContracts.RequestPermission()) { isGranted: Boolean ->
             if (isGranted) {
-                // permission is granted.
             } else {
                 // Handle the case where the user denies the permission.
                 // You could show a message explaining why the permission is needed.
@@ -42,6 +41,7 @@ class MainActivity : ComponentActivity() {
                     val linearAccelerometerData by viewModel.linearAccelerometerData
                     val gyroscopeData by viewModel.gyroscopeData
                     val currentAlgorithm by viewModel.currentAlgorithm
+                    val elevationHistory = viewModel.elevationHistory
 
                     HomeScreen(
                         modifier = Modifier.padding(innerPadding),
@@ -50,6 +50,7 @@ class MainActivity : ComponentActivity() {
                         linearAccelerometerData = linearAccelerometerData,
                         gyroscopeData = gyroscopeData,
                         currentAlgorithm = currentAlgorithm,
+                        elevationHistory = elevationHistory,
                         onAlgorithmChange = { algorithm ->
                             viewModel.setAlgorithm(algorithm)
                         },

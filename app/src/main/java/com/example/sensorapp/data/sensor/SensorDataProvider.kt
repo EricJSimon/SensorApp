@@ -27,11 +27,9 @@ class SensorDataProvider(context: Context) {
             }
 
             override fun onAccuracyChanged(sensor: Sensor?, accuracy: Int) {
-                // Not needed for this use case
             }
         }
 
-        // Register the listeners based on the selected algorithm
         when (algorithm) {
             Algorithm.EWMA_FILTER -> {
                 sensorManager.registerListener(sensorListener, gravitySensor, SensorManager.SENSOR_DELAY_UI)
@@ -42,8 +40,6 @@ class SensorDataProvider(context: Context) {
                 sensorManager.registerListener(sensorListener, gyroscope, SensorManager.SENSOR_DELAY_UI)
             }
         }
-
-        // This block is called when the flow is cancelled
         awaitClose {
             sensorManager.unregisterListener(sensorListener)
         }

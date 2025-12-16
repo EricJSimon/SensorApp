@@ -26,6 +26,7 @@ fun HomeScreen(
     gyroscopeData: FloatArray,
     currentAlgorithm: Algorithm,
     onAlgorithmChange: (Algorithm) -> Unit,
+    elevationHistory: List<Float>,
     onButtonClick: () -> Unit,
     onExportClick: () -> Unit,
     modifier: Modifier = Modifier
@@ -34,7 +35,7 @@ fun HomeScreen(
     Column(
         modifier = modifier.fillMaxSize(),
         horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center
+        verticalArrangement = Arrangement.Top
     ) {
         Text(
             text = "Arm Elevation Monitor",
@@ -87,7 +88,10 @@ fun HomeScreen(
         Button(onClick = onButtonClick) {
             Text(text = if (isMeasuring) "Stop Measurement" else "Start Measurement")
         }
-        Spacer(modifier = Modifier.height(16.dp))
+        Spacer(modifier = Modifier.height(32.dp))
+        if(elevationHistory.isNotEmpty()) {
+            ElevationGraph(dataPoints = elevationHistory)
+        }
         Button(
             onClick = onExportClick,
             enabled = !isMeasuring

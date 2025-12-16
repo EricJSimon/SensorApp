@@ -12,6 +12,7 @@ import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import androidx.compose.runtime.mutableStateListOf
 import com.example.sensorapp.data.model.MeasurementData
 import com.example.sensorapp.data.sensor.SensorDataProvider
 import com.example.sensorapp.domain.model.Algorithm
@@ -32,7 +33,6 @@ class SensorViewModel(application: Application) : AndroidViewModel(application) 
     private val ewmaProcessor = EwmaFilterProcessor()
     private val sensorFusionProcessor = SensorFusionProcessor()
 
-    // Public UI State
     private val _isMeasuring = mutableStateOf(false)
     val isMeasuring: State<Boolean> = _isMeasuring
 
@@ -47,6 +47,9 @@ class SensorViewModel(application: Application) : AndroidViewModel(application) 
 
     private val _currentAlgorithm = mutableStateOf(Algorithm.EWMA_FILTER)
     val currentAlgorithm: State<Algorithm> = _currentAlgorithm
+
+    private val _elevationHistory = mutableStateListOf<Float>()
+    val elevationHistory: List<Float> = _elevationHistory
 
     private var sensorJob: Job? = null
     private val measurementHistory = mutableListOf<MeasurementData>()
@@ -132,8 +135,6 @@ class SensorViewModel(application: Application) : AndroidViewModel(application) 
                 } else {
                     Log.w(TAG, "Gyroscope event skipped due to non-positive dt: $dt")
                 }
-
-                // FIX: Update lastTimestamp at the end of every gyroscope event
                 lastTimestamp = event.timestamp
                 _gyroscopeData.value = event.values.clone()
             }
@@ -142,10 +143,12 @@ class SensorViewModel(application: Application) : AndroidViewModel(application) 
 
     private fun addMeasurementToHistory(timestamp: Long,value: Float, algorithmName: String) {
         measurementHistory.add(MeasurementData(timestamp,value,algorithmName))
+        _elevationHistory.add(value)
     }
 
     private fun resetAllState() {
         Log.d(TAG, "Resetting all states.")
+        _elevationHistory.clear()
         measurementHistory.clear()
         sessionStartTimestamp = 0L
         lastTimestamp = 0L
