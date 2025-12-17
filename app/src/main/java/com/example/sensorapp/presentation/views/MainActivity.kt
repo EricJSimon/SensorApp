@@ -1,7 +1,10 @@
 package com.example.sensorapp.presentation.views
 
 import android.Manifest
+import android.content.Intent
+import android.net.Uri
 import android.os.Bundle
+import android.provider.Settings
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -9,8 +12,12 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.Modifier
 import com.example.sensorapp.presentation.viewmodels.SensorViewModel
 import com.example.sensorapp.ui.theme.SensorAppTheme
@@ -18,12 +25,12 @@ import com.example.sensorapp.ui.theme.SensorAppTheme
 class MainActivity : ComponentActivity() {
     private val viewModel: SensorViewModel by viewModels()
 
+    private val showPermissionDialog = mutableStateOf(false)
+
     private val requestPermissionLauncher =
         registerForActivityResult(ActivityResultContracts.RequestPermission()) { isGranted: Boolean ->
             if (isGranted) {
-            } else {
-                // Handle the case where the user denies the permission.
-                // You could show a message explaining why the permission is needed.
+                showPermissionDialog.value = true
             }
         }
 
@@ -42,6 +49,35 @@ class MainActivity : ComponentActivity() {
                     val gyroscopeData by viewModel.gyroscopeData
                     val currentAlgorithm by viewModel.currentAlgorithm
                     val elevationHistory = viewModel.elevationHistory
+
+                    if (showPermissionDialog.value) {
+                        AlertDialog(
+                            onDismissRequest = {
+                                showPermissionDialog.value = false
+                            },
+                            title = { Text("Permission Required") },
+                            text = { Text("This app needs access to body sensors to measure arm elevation. Please grant the permission in the app settings.") },
+                            confirmButton = {
+                                TextButton(
+                                    onClick = {
+                                        showPermissionDialog.value = false
+                                        val intent =
+                                            Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS)
+                                        val uri = Uri.fromParts("package", packageName, null)
+                                        intent.data = uri
+                                        startActivity(intent)
+                                    }
+                                ) {
+                                    Text("Open Settings")
+                                }
+                            },
+                            dismissButton = {
+                                TextButton(onClick = { showPermissionDialog.value = false }) {
+                                    Text("Dismiss")
+                                }
+                            }
+                        )
+                    }
 
                     HomeScreen(
                         modifier = Modifier.padding(innerPadding),

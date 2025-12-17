@@ -36,6 +36,7 @@ fun ElevationGraph(
             modifier = Modifier.padding(start = 16.dp, bottom = 8.dp)
         )
 
+        @Suppress("COMPOSE_APPLIER_CALL_MISMATCH")
         AndroidView(
             modifier = Modifier
                 .fillMaxWidth()
